@@ -16,17 +16,26 @@ cmake_minimum_required(VERSION 2.8.12)  # Ships with Ubuntu 14.04 (Trusty)
 
 project(async_grpc)
 
-set(ASYNC_GRPC_MAJOR_VERSION 0)
-set(ASYNC_GRPC_MINOR_VERSION 1)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+include(functions)
+
+# external dependencies
+include(protobuf)
+include(grpc)
+include(glog)
+include(googletest)
+
+
+set(ASYNC_GRPC_MAJOR_VERSION 1)
+set(ASYNC_GRPC_MINOR_VERSION 0)
 set(ASYNC_GRPC_PATCH_VERSION 0)
 set(ASYNC_GRPC_VERSION ${ASYNC_GRPC_MAJOR_VERSION}.${ASYNC_GRPC_MINOR_VERSION}.${ASYNC_GRPC_PATCH_VERSION})
 set(ASYNC_GRPC_SOVERSION ${ASYNC_GRPC_MAJOR_VERSION}.${ASYNC_GRPC_MINOR_VERSION})
 
-include("${PROJECT_SOURCE_DIR}/cmake/functions.cmake")
 google_initialize_async_grpc_project()
+
 enable_testing()
-find_package(GMock REQUIRED)
-find_package(Protobuf 3.0.0 REQUIRED)
 
 set(ALL_LIBRARY_HDRS
     async_grpc/client.h
@@ -63,8 +72,12 @@ set(ALL_TESTS
     async_grpc/server_test.cc
     async_grpc/type_traits_test.cc)
 
-set(ALL_PROTOS
-    async_grpc/proto/math_service.proto)
+list(REMOVE_ITEM ALL_LIBRARY_SRCS ${ALL_TESTS})
+
+set(INSTALL_SOURCE_HDRS ${ALL_LIBRARY_HDRS})
+
+file(GLOB_RECURSE ALL_PROTOS "async_grpc*/*.proto")
+set(ALL_PROTOS async_grpc/proto/math_service.proto)
 
 set(ALL_PROTO_SRCS)
 set(ALL_PROTO_HDRS)
@@ -86,6 +99,7 @@ foreach(RELATIVEPATH ${ALL_PROTOS})
     VERBATIM
   )
 endforeach()
+
 set_source_files_properties(${ALL_PROTO_SRCS} ${ALL_PROTO_HDRS} PROPERTIES GENERATED TRUE)
 
 add_library(${PROJECT_NAME} ${ALL_LIBRARY_HDRS} ${ALL_LIBRARY_SRCS} ${ALL_PROTO_HDRS} ${ALL_PROTO_SRCS})
@@ -100,11 +114,14 @@ foreach(RELATIVEPATH ${ALL_TESTS})
   target_link_libraries("${TEST_TARGET_NAME}" PUBLIC grpc++)
 endforeach()
 
+if(TARGET glog)
+  message("found the target...")
+endif()
 target_link_libraries(${PROJECT_NAME} PUBLIC glog)
-target_link_libraries(${PROJECT_NAME} PUBLIC gflags)
+# target_link_libraries(${PROJECT_NAME} PUBLIC gflags)
 
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
-  ${PROTOBUF_INCLUDE_DIR})
+target_include_directories(${PROJECT_NAME} SYSTEM 
+  PUBLIC ${PROTOBUF_INCLUDE_DIR})
 # TODO(hrapp): This should not explicitly list pthread and use
 # PROTOBUF_LIBRARIES, but that failed on first try.
 target_link_libraries(${PROJECT_NAME} PUBLIC ${PROTOBUF_LIBRARY} pthread)
@@ -118,8 +135,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
-  "${GMOCK_INCLUDE_DIRS}")
+# TODO(damonkohler): Create a testing library.
+target_include_directories(${PROJECT_NAME} SYSTEM 
+  PRIVATE "${GMOCK_INCLUDE_DIRS}")
+target_link_libraries(${PROJECT_NAME} PRIVATE ${GMOCK_LIBRARY})
 
 set(TARGET_COMPILE_FLAGS "${TARGET_COMPILE_FLAGS} ${GOOG_CXX_FLAGS}")
 set_target_properties(${PROJECT_NAME} PROPERTIES

@@ -21,13 +21,9 @@ function(google_test NAME ARG_SRC)
   set_target_properties(${NAME} PROPERTIES
     COMPILE_FLAGS ${TARGET_COMPILE_FLAGS})
 
-  target_include_directories(${NAME} PUBLIC ${PROJECT_NAME})
   target_link_libraries(${NAME} PUBLIC ${PROJECT_NAME})
-
-  # Make sure that gmock always includes the correct gtest/gtest.h.
-  target_include_directories("${NAME}" SYSTEM PRIVATE
-    "${GMOCK_INCLUDE_DIRS}")
-  target_link_libraries("${NAME}" PUBLIC ${GMOCK_LIBRARIES})
+  target_link_libraries(${NAME} PUBLIC gtest)
+  target_link_libraries(${NAME} PUBLIC gmock)
 
   add_test(${NAME} ${NAME})
 endfunction()
